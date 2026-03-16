@@ -1,0 +1,58 @@
+name: Backtest Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      initial_capital:
+        description: 'Capital inicial para backtest'
+        required: true
+        default: '1000'
+      days:
+        description: 'Días históricos a descargar'
+        required: true
+        default: '7'
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        bot: [sol_1m, sol_3m, sol_5m, scanner_top20]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy requests
+
+      - name: Run Backtest
+        id: run_backtest
+        run: |
+          mkdir -p reports
+          case "${{ matrix.bot }}" in
+            sol_1m)
+              python backtest.py --exchange kucoin --symbol SOL-USDT --timeframe 1 --days ${{ github.event.inputs.days }} --initial_capital ${{ github.event.inputs.initial_capital }}
+              ;;
+            sol_3m)
+              python backtest.py --exchange kucoin --symbol SOL-USDT --timeframe 3 --days ${{ github.event.inputs.days }} --initial_capital ${{ github.event.inputs.initial_capital }}
+              ;;
+            sol_5m)
+              python backtest.py --exchange kucoin --symbol SOL-USDT --timeframe 5 --days ${{ github.event.inputs.days }} --initial_capital ${{ github.event.inputs.initial_capital }}
+              ;;
+            scanner_top20)
+              python backtest.py --exchange kucoin --days ${{ github.event.inputs.days }} --initial_capital ${{ github.event.inputs.initial_capital }}
+              ;;
+          esac
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: backtest-reports-${{ matrix.bot }}
+          path: reports/
