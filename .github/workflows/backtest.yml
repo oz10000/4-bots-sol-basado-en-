@@ -1,58 +1,43 @@
-name: Backtest Workflow
+name: Unified Backtest
 
 on:
   workflow_dispatch:
-    inputs:
-      initial_capital:
-        description: 'Capital inicial para backtest'
-        required: true
-        default: '1000'
-      days:
-        description: 'Días históricos a descargar'
-        required: true
-        default: '7'
+  schedule:
+    - cron: "0 0 * * *"  # opcional: ejecuta cada día a medianoche UTC
 
 jobs:
   backtest:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        bot: [sol_1m, sol_3m, sol_5m, scanner_top20]
+        bot: [sol_1m, sol_3m, sol_5m, scanner_top20]  # los 4 bots
+        exchange: [binance, kucoin]                   # permite backtest en ambos exchanges
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: 3.11
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy requests
+          pip install pandas numpy requests matplotlib
 
       - name: Run Backtest
-        id: run_backtest
         run: |
-          mkdir -p reports
-          case "${{ matrix.bot }}" in
-            sol_1m)
-              python backtest.py --exchange kucoin --symbol SOL-USDT --timeframe 1 --days ${{ github.event.inputs.days }} --initial_capital ${{ github.event.inputs.initial_capital }}
-              ;;
-            sol_3m)
-              python backtest.py --exchange kucoin --symbol SOL-USDT --timeframe 3 --days ${{ github.event.inputs.days }} --initial_capital ${{ github.event.inputs.initial_capital }}
-              ;;
-            sol_5m)
-              python backtest.py --exchange kucoin --symbol SOL-USDT --timeframe 5 --days ${{ github.event.inputs.days }} --initial_capital ${{ github.event.inputs.initial_capital }}
-              ;;
-            scanner_top20)
-              python backtest.py --exchange kucoin --days ${{ github.event.inputs.days }} --initial_capital ${{ github.event.inputs.initial_capital }}
-              ;;
-          esac
+          mkdir -p reports/${{ matrix.bot }}
+          if [[ "${{ matrix.bot }}" == "scanner_top20" ]]; then
+            python backtest.py --exchange ${{ matrix.exchange }} --days 7 --initial_capital 1000
+          else
+            timeframe=$(echo ${{ matrix.bot }} | cut -d'_' -f2 | sed 's/m//')
+            python backtest.py --exchange ${{ matrix.exchange }} --timeframe $timeframe --days 7 --initial_capital 1000
+          fi
 
       - name: Upload Reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: backtest-reports-${{ matrix.bot }}
-          path: reports/
+          name: backtest-reports-${{ matrix.bot }}-${{ matrix.exchange }}
+          path: reports/${{ matrix.bot }}/
