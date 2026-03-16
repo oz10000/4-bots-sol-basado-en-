@@ -1,39 +1,38 @@
-name: Unified Backtest
+name: Unified Backtest Workflow
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 0 * * *"  # opcional: ejecuta cada día a medianoche UTC
 
 jobs:
   backtest:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        bot: [sol_1m, sol_3m, sol_5m, scanner_top20]  # los 4 bots
-        exchange: [binance, kucoin]                   # permite backtest en ambos exchanges
+        bot: [sol_1m, sol_3m, sol_5m, scanner_top20]
+        exchange: [binance, kucoin]
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install -r requirements.txt
           pip install pandas numpy requests matplotlib
 
       - name: Run Backtest
         run: |
           mkdir -p reports/${{ matrix.bot }}
           if [[ "${{ matrix.bot }}" == "scanner_top20" ]]; then
-            python backtest.py --exchange ${{ matrix.exchange }} --days 7 --initial_capital 1000
+            python backtest.py --exchange ${{ matrix.exchange }} --days 7 --timeframe 1 --initial_capital 1000
           else
-            timeframe=$(echo ${{ matrix.bot }} | cut -d'_' -f2 | sed 's/m//')
-            python backtest.py --exchange ${{ matrix.exchange }} --timeframe $timeframe --days 7 --initial_capital 1000
+            timeframe=$(echo ${{ matrix.bot }} | grep -oP '\d+m' | grep -oP '\d+')
+            python backtest.py --exchange ${{ matrix.exchange }} --symbol SOLUSDT --timeframe $timeframe --days 7 --initial_capital 1000
           fi
 
       - name: Upload Reports
