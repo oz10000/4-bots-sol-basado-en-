@@ -1,0 +1,86 @@
+name: Unified Trading Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Modo de ejecución (backtest/sim/live)'
+        required: true
+        default: backtest
+
+jobs:
+  sol_1min:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+      - run: |
+          if [ "${{ github.event.inputs.mode }}" = "backtest" ]; then
+            python backtest.py --exchange binance --symbol SOLUSDT --timeframe 1 --days 7 --initial_capital 1000
+          else
+            python modulo_estrategia_sol.py  # sim/live según lógica interna
+          fi
+      - uses: actions/upload-artifact@v3
+        with:
+          name: reports-sol_1min
+          path: reports/
+
+  sol_3min:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+      - run: |
+          if [ "${{ github.event.inputs.mode }}" = "backtest" ]; then
+            python backtest.py --exchange binance --symbol SOLUSDT --timeframe 3 --days 7 --initial_capital 1000
+          else
+            python modulo_estrategia_sol.py
+          fi
+      - uses: actions/upload-artifact@v3
+        with:
+          name: reports-sol_3min
+          path: reports/
+
+  sol_5min:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+      - run: |
+          if [ "${{ github.event.inputs.mode }}" = "backtest" ]; then
+            python backtest.py --exchange binance --symbol SOLUSDT --timeframe 5 --days 7 --initial_capital 1000
+          else
+            python modulo_estrategia_sol.py
+          fi
+      - uses: actions/upload-artifact@v3
+        with:
+          name: reports-sol_5min
+          path: reports/
+
+  kucoin_scanner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: pip install -r requirements.txt
+      - run: |
+          if [ "${{ github.event.inputs.mode }}" = "backtest" ]; then
+            python backtest.py --exchange kucoin --timeframe 1 --days 7 --initial_capital 1000
+          else
+            python modulo_estrategia_sol.py
+          fi
+      - uses: actions/upload-artifact@v3
+        with:
+          name: reports-kucoin
+          path: reports/
